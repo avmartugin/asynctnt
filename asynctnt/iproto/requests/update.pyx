@@ -101,6 +101,7 @@ cdef char *encode_update_ops(WriteBuffer buffer,
             p = mp_encode_str(p, field_no, <uint32_t> field_no_len)
             buffer._length += (p - begin)
             p = buffer.mp_encode_obj(p, op_argument)
+        
         elif op == tarantool.IPROTO_OP_INSERT \
                 or op == tarantool.IPROTO_OP_ASSIGN:
             op_argument = operation[2]
@@ -110,39 +111,7 @@ cdef char *encode_update_ops(WriteBuffer buffer,
             p = mp_encode_str(p, field_no, <uint32_t> field_no_len)
             buffer._length += (p - begin)
             p = buffer.mp_encode_obj(p, op_argument)
-
-        elif op == tarantool.IPROTO_OP_SPLICE:
-            if op_len < 5:
-                raise IndexError(
-                    'Splice operation must have length of 5, '
-                    'but got: {}'.format(op_len)
-                )
-
-            splice_position_obj = operation[2]
-            splice_offset_obj = operation[3]
-            op_argument = operation[4]
-            if not isinstance(splice_position_obj, int):
-                raise TypeError('Splice position must be int')
-            if not isinstance(splice_offset_obj, int):
-                raise TypeError('Splice offset must be int')
-
-            splice_position = <uint32_t> splice_position_obj
-            splice_offset = <uint32_t> splice_offset_obj
-
-            # mp_sizeof_array(5) + mp_sizeof_str(1) + ...
-            extra_length = 1 + 2 \
-                           + mp_sizeof_uint(field_no) \
-                           + mp_sizeof_uint(splice_position) \
-                           + mp_sizeof_uint(splice_offset)
-            p = begin = buffer._ensure_allocated(p, extra_length)
-
-            p = mp_encode_array(p, 5)
-            p = mp_encode_str(p, op_str_c, 1)
-            p = mp_encode_str(p, field_no, <uint32_t> field_no_len)
-            p = mp_encode_uint(p, splice_position)
-            p = mp_encode_uint(p, splice_offset)
-            buffer._length += (p - begin)
-            p = buffer.mp_encode_obj(p, op_argument)
+        
         else:
             raise TypeError(
                 'Unknown update operation type `{}`'.format(op_type_str))
