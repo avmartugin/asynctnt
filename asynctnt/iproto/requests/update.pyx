@@ -75,7 +75,7 @@ cdef char *encode_update_ops(WriteBuffer buffer,
                        + mp_sizeof_str(<uint32_t> field_no_len) \
                        + 1
      
-        buffer._ensure_allocated(max_field_len)
+        buffer.ensure_allocated(max_field_len)
     
         cpython.bytes.PyBytes_AsStringAndSize(str_temp, &op_str_c,
                                               &op_str_len)
