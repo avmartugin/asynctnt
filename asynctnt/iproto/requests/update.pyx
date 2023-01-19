@@ -98,7 +98,7 @@ cdef char *encode_update_ops(WriteBuffer buffer,
 
             p = mp_encode_array(p, 3)
             p = mp_encode_str(p, op_str_c, 1)
-            p = mp_encode_str(p, field_no)
+            p = mp_encode_str(p, field_no, <uint32_t> field_no_len)
             buffer._length += (p - begin)
             p = buffer.mp_encode_obj(p, op_argument)
         elif op == tarantool.IPROTO_OP_INSERT \
@@ -107,7 +107,7 @@ cdef char *encode_update_ops(WriteBuffer buffer,
 
             p = mp_encode_array(p, 3)
             p = mp_encode_str(p, op_str_c, 1)
-            p = mp_encode_str(p, field_no)
+            p = mp_encode_str(p, field_no, <uint32_t> field_no_len)
             buffer._length += (p - begin)
             p = buffer.mp_encode_obj(p, op_argument)
 
@@ -138,7 +138,7 @@ cdef char *encode_update_ops(WriteBuffer buffer,
 
             p = mp_encode_array(p, 5)
             p = mp_encode_str(p, op_str_c, 1)
-            p = mp_encode_str(p, field_no)
+            p = mp_encode_str(p, field_no, <uint32_t> field_no_len)
             p = mp_encode_uint(p, splice_position)
             p = mp_encode_uint(p, splice_offset)
             buffer._length += (p - begin)
