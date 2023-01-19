@@ -19,12 +19,13 @@ cdef char *encode_update_ops(WriteBuffer buffer,
         char *op_str_c
         ssize_t op_str_len
         char op
-
         uint32_t extra_length
 
-        uint64_t field_no
+        char *field_no
         object field_no_obj
-
+        uint32_t field_no_len
+        bytes field_temp
+        
         uint32_t splice_position, splice_offset
 
     begin = NULL
@@ -58,19 +59,24 @@ cdef char *encode_update_ops(WriteBuffer buffer,
                 'Operation type must of a str or bytes type')
 
         field_no_obj = operation[1]
-        if isinstance(field_no_obj, int):
-            field_no = <int> field_no_obj
-        elif isinstance(field_no_obj, str):
-            if space.metadata is not None:
-                field_no = <int> space.metadata.id_by_name(field_no_obj)
-            else:
-                raise TypeError(
-                    'Operation field_no must be int as there is '
-                    'no format declaration in space {}'.format(space.sid))
+        if isinstance(field_no_obj, str):
+            field_temp = encode_unicode_string(field_no_obj, buffer._encoding)
+        elif isinstance(field_no_obj, bytes):
+            field_temp = <bytes> field_no_obj
         else:
             raise TypeError(
-                'Operation field_no must be of either int or str type')
-
+                'Field type must of a str or bytes type')
+        
+        cpython.bytes.PyBytes_AsStringAndSize(field_temp,
+                                              &field_no,
+                                              &field_no_len)
+        max_field_len = 1 \
+                       + 1 \
+                       + mp_sizeof_str(<uint32_t> field_no_len) \
+                       + 1
+     
+        buffer._ensure_allocated(max_field_len)
+    
         cpython.bytes.PyBytes_AsStringAndSize(str_temp, &op_str_c,
                                               &op_str_len)
         op = <char> 0
@@ -89,30 +95,19 @@ cdef char *encode_update_ops(WriteBuffer buffer,
                     'int argument required for '
                     'Arithmetic and Delete operations'
                 )
-            # mp_sizeof_array(3)
-            # + mp_sizeof_str(1)
-            # + mp_sizeof_uint(field_no)
-            extra_length = 1 + 2 + mp_sizeof_uint(field_no)
-            p = begin = buffer._ensure_allocated(p, extra_length)
 
             p = mp_encode_array(p, 3)
             p = mp_encode_str(p, op_str_c, 1)
-            p = mp_encode_uint(p, field_no)
+            p = mp_encode_str(p, field_no)
             buffer._length += (p - begin)
             p = buffer.mp_encode_obj(p, op_argument)
         elif op == tarantool.IPROTO_OP_INSERT \
                 or op == tarantool.IPROTO_OP_ASSIGN:
             op_argument = operation[2]
 
-            # mp_sizeof_array(3)
-            # + mp_sizeof_str(1)
-            # + mp_sizeof_uint(field_no)
-            extra_length = 1 + 2 + mp_sizeof_uint(field_no)
-            p = begin = buffer._ensure_allocated(p, extra_length)
-
             p = mp_encode_array(p, 3)
             p = mp_encode_str(p, op_str_c, 1)
-            p = mp_encode_uint(p, field_no)
+            p = mp_encode_str(p, field_no)
             buffer._length += (p - begin)
             p = buffer.mp_encode_obj(p, op_argument)
 
@@ -143,7 +138,7 @@ cdef char *encode_update_ops(WriteBuffer buffer,
 
             p = mp_encode_array(p, 5)
             p = mp_encode_str(p, op_str_c, 1)
-            p = mp_encode_uint(p, field_no)
+            p = mp_encode_str(p, field_no)
             p = mp_encode_uint(p, splice_position)
             p = mp_encode_uint(p, splice_offset)
             buffer._length += (p - begin)
