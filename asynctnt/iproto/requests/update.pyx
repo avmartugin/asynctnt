@@ -23,7 +23,7 @@ cdef char *encode_update_ops(WriteBuffer buffer,
 
         char *field_no
         object field_no_obj
-        uint32_t field_no_len
+        ssize_t field_no_len
         bytes field_temp
         
         uint32_t splice_position, splice_offset
